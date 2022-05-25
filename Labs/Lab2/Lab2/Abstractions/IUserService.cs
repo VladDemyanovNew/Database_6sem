@@ -1,6 +1,8 @@
 ﻿namespace Lab2.Abstractions;
 
 using Lab2.Models;
+using Microsoft.SqlServer.Types;
+using System.Data.SqlTypes;
 
 public interface IUserService
 {
@@ -19,4 +21,8 @@ public interface IUserService
     Task SubscribeAsync(int ownerId, int subscriberId);
 
     Task UnsubscribeAsync(int ownerId, int subscriberId);
+
+    Task<User?> FindNearestNeighborAsync(int userId);
+
+    Task<IEnumerable<string>> DisplayShortestWay();
 }

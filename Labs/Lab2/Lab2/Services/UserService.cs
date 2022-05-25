@@ -2,7 +2,9 @@
 using Lab2.Exceptions;
 using Lab2.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.SqlServer.Types;
 using System.Data;
+using System.Data.SqlTypes;
 
 namespace Lab2.Services;
 
@@ -289,5 +291,62 @@ public class UserService : IUserService
     {
         var subscribers = await this.GetSubscribersAsync(ownerId);
         return subscribers.Any(user => user.Id == subscriberId);
+    }
+
+    public async Task<User?> FindNearestNeighborAsync(int userId)
+    {
+        using (SqlConnection connection = new SqlConnection(this.connectionString))
+        {
+            await connection.OpenAsync();
+
+            SqlCommand command = new SqlCommand("FindNearestNeighbor", connection);
+            command.CommandType = CommandType.StoredProcedure;
+
+            SqlParameter userIdParam = new SqlParameter
+            {
+                ParameterName = "@UserId",
+                Value = userId
+            };
+            SqlParameter resultParam = new SqlParameter
+            {
+                ParameterName = "@Result",
+                SqlDbType = SqlDbType.Int,
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(userIdParam);
+            command.Parameters.Add(resultParam);
+
+            await command.ExecuteScalarAsync();
+
+            var neighborId = (int)resultParam.Value;
+            return await this.GetAsync(neighborId);
+        }
+    }
+
+    public async Task<IEnumerable<string>> DisplayShortestWay()
+    {
+        var result = new List<SqlGeometry>();
+        using (SqlConnection connection = new SqlConnection(this.connectionString))
+        {
+            await connection.OpenAsync();
+
+            SqlCommand command = new SqlCommand("TEST_PROCEDURE", connection);
+            command.CommandType = CommandType.StoredProcedure;
+
+            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+            {
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var geometry = new SqlGeometry();
+                        geometry.Read(new BinaryReader(reader.GetSqlBytes(0).Stream));
+                        result.Add(geometry);
+                    }
+                }
+            }
+        }
+
+        return result.Select(spatialData => spatialData.ToString());
     }
 }

@@ -7,7 +7,10 @@ CREATE TABLE USERS
 	NICKNAME NVARCHAR(30) UNIQUE NOT NULL,
 
 	CONSTRAINT PK_USER_ID PRIMARY KEY CLUSTERED (ID ASC)
-);				
+);
+
+ALTER TABLE USERS
+ADD COORDINATES GEOMETRY NULL;
 
 CREATE TABLE POSTS
 (
@@ -97,21 +100,21 @@ insert users (nickname)
 			  ('user3');
 
 insert posts (content, owner_id)
-		values('content1', 2),
-			  ('content2', 8),
+		values('content1', 1),
+			  ('content2', 1),
 			  ('content3', 2),
 			  ('content4', 3);
 
 insert comments (content, owner_id, post_id)
-		values('content1', 2, 3),
-			  ('content2', 8, 3),
-			  ('content3', 8, 7),
-			  ('content4', 3, 7);
+		values('content1', 1, 1),
+			  ('content2', 1, 2),
+			  ('content3', 2, 2),
+			  ('content4', 3, 3);
 
 insert likes (post_id, owner_id)
-		values(3, 8),
-			  (3, 2),
-			  (3, 4),
+		values(2, 1),
+			  (1, 1),
+			  (1, 2),
 			  (3, 3);
 
 

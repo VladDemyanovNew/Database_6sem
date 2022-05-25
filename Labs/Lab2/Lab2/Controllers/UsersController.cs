@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Lab2.Abstractions;
 using Lab2.Models;
 using Lab2.Exceptions;
+using System.Data.SqlTypes;
+using Microsoft.SqlServer.Types;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -73,4 +75,12 @@ public class UsersController : ControllerBase
         await this.userService.UnsubscribeAsync(ownerId, subscriberId);
         return NoContent();
     }
+
+    [HttpGet("{userId}/nearest")]
+    public async Task<ActionResult<User?>> FindNearestNeighbor(int userId) =>
+        await this.userService.FindNearestNeighborAsync(userId);
+
+    [HttpGet("shortestWay")]
+    public async Task<IEnumerable<string>> DisplayShortestWay() =>
+        await this.userService.DisplayShortestWay();
 }
