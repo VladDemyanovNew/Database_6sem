@@ -8,6 +8,7 @@ using Lab2.Models;
 using Lab2.Exceptions;
 using System.Data.SqlTypes;
 using Microsoft.SqlServer.Types;
+using Lab2.Database;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -21,21 +22,11 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ICollection<User>> GetAll() =>
-        await this.userService.GetAllAsync();
+    public IEnumerable<User> GetAll() => this.userService.GetAll();
 
     [HttpGet("{userId}")]
-    public async Task<User> Get(int userId)
-    {
-        var user = await this.userService.GetAsync(userId);
-
-        if (user == null)
-        {
-            throw new EntityNotFoundException($"User with id={userId} has not found");
-        }
-
-        return user;
-    }
+    public async Task<User> Get(int userId) => 
+        await this.userService.GetAsync(userId);
 
     [HttpPost]
     public async Task<ActionResult<User>> Post([FromBody] User userCreateData)
@@ -57,30 +48,4 @@ public class UsersController : ControllerBase
         await this.userService.DeleteAsync(userId);
         return NoContent();
     }
-
-    [HttpGet("{userId}/subscribers")]
-    public async Task<ICollection<User>> GetUserSubscribers(int userId) =>
-        await this.userService.GetSubscribersAsync(userId);
-
-    [HttpPost("{ownerId}/subscribers/{subscriberId}")]
-    public async Task<IActionResult> Subscribe(int ownerId, int subscriberId)
-    {
-        await this.userService.SubscribeAsync(ownerId, subscriberId);
-        return NoContent();
-    }
-
-    [HttpDelete("{ownerId}/subscribers/{subscriberId}")]
-    public async Task<IActionResult> Unsubscribe(int ownerId, int subscriberId)
-    {
-        await this.userService.UnsubscribeAsync(ownerId, subscriberId);
-        return NoContent();
-    }
-
-    [HttpGet("{userId}/nearest")]
-    public async Task<ActionResult<User?>> FindNearestNeighbor(int userId) =>
-        await this.userService.FindNearestNeighborAsync(userId);
-
-    [HttpGet("shortestWay")]
-    public async Task<IEnumerable<string>> DisplayShortestWay() =>
-        await this.userService.DisplayShortestWay();
 }

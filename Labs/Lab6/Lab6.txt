@@ -1,0 +1,1 @@
+Scaffold-Dbcontext "Data Source=(DESCRIPTION=(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = DESKTOP-KE0MIUH)(PORT = 1521)))(CONNECT_DATA =(SERVER = DEDICATED)(SERVICE_NAME = orcl.be.by))); User Id=system;Password=admin;" Oracle.EntityFrameworkCore -Tables USERS, POSTS -OutputDir Database -force

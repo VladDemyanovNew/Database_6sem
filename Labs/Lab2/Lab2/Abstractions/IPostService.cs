@@ -1,16 +1,16 @@
-﻿namespace Lab2.Abstractions;
+﻿using Lab2.Database;
 
-using Lab2.Models;
+namespace Lab2.Abstractions;
 
 public interface IPostService
 {
     Task<Post> CreateAsync(Post postCreateData);
 
-    Task<ICollection<Post>> GetAllAsync();
+    IEnumerable<Post> GetAll();
 
     Task DeleteAsync(int postId);
 
     Task UpdateAsync(int postId, Post postUdpateData);
 
-    Task<Post?> GetAsync(int postId);
+    Task<Post> GetAsync(int postId);
 }

@@ -1,7 +1,6 @@
 ﻿using Lab2.Abstractions;
+using Lab2.Database;
 using Lab2.Exceptions;
-using Lab2.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab2.Controllers
@@ -18,28 +17,16 @@ namespace Lab2.Controllers
         }
 
         [HttpGet("{postId}")]
-        public async Task<Post> Get(int postId)
-        {
-            var post = await this.postService.GetAsync(postId);
-
-            if (post == null)
-            {
-                throw new EntityNotFoundException($"Post with id={postId} has not found");
-            }
-
-            return post;
-        }
+        public async Task<Post> Get(int postId) =>
+            await this.postService.GetAsync(postId);
 
         [HttpGet]
-        public async Task<ICollection<Post>> GetAll() => 
-            await postService.GetAllAsync();
+        public IEnumerable<Post> GetAll() => 
+            this.postService.GetAll();
 
         [HttpPost]
-        public async Task<ActionResult<Post>> Post([FromBody] Post postCreateData)
-        {
-            var post = await this.postService.CreateAsync(postCreateData);
-            return CreatedAtAction(nameof(Get), new { postId = post.Id }, post);
-        }
+        public async Task<Post> Post([FromBody] Post postCreateData) => 
+            await this.postService.CreateAsync(postCreateData);
 
         [HttpPut("{postId}")]
         public async Task<IActionResult> Put(int postId, [FromBody] Post postUpdateData)

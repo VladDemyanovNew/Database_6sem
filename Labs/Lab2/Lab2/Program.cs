@@ -1,23 +1,33 @@
+using Lab2;
 using Lab2.Abstractions;
+using Lab2.Database;
 using Lab2.Exceptions;
 using Lab2.Models;
 using Lab2.Services;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+});
 
 builder.Services
     .AddScoped<IUserService, UserService>()
     .AddScoped<IPostService, PostService>();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<Lab6Context>(options => 
+    options.UseOracle(connectionString));
+
 var app = builder.Build();
 
-// Configure Exception handler.
 app.UseExceptionHandler(app => app.Run(async context =>
 {
-    var exception = context.Features.Get<IExceptionHandlerFeature>().Error;
+    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
     switch (exception)
     {
