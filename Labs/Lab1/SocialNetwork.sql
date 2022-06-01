@@ -100,8 +100,8 @@ insert users (nickname)
 			  ('user3');
 
 insert posts (content, owner_id)
-		values('content1', 1),
-			  ('content2', 1),
+		values('content1', 2),
+			  ('content2', 2),
 			  ('content3', 2),
 			  ('content4', 3);
 

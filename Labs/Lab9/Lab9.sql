@@ -23,7 +23,7 @@ GO
 CREATE OR ALTER PROCEDURE SeedDatabase AS
 BEGIN
 	DECLARE @TruncateAllQuery VARCHAR(256) = 'BEGIN SET QUOTED_IDENTIFIER ON; DELETE FROM ?; END';
-	DECLARE @ResetIdentityQuery VARCHAR(256) = 'BEGIN DBCC CHECKIDENT(''?'', RESEED, 1); END';
+	DECLARE @ResetIdentityQuery VARCHAR(256) = 'BEGIN DBCC CHECKIDENT(''?'', RESEED, 0); END';
 	EXEC sp_MSForEachTable @TruncateAllQuery;
 	EXEC sp_MSForEachTable @ResetIdentityQuery;
 
@@ -45,7 +45,7 @@ BEGIN
 		DECLARE @RandomOwnerId INT = FLOOR(RAND()*(@RowsCount-1)+1),
 						@RandomSubscriberId INT = FLOOR(RAND()*(@RowsCount-1)+1),
 						@DoesAlreadyExist INT;
-		SET @RandomDate = DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 3650), '2000-01-01');
+		SET @RandomDate = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 3650), CURRENT_TIMESTAMP);
 		
 		SELECT @DoesAlreadyExist = SUBSCRIBER_ID FROM dbo.SUBSCRIPTIONS
 		WHERE OWNER_ID = @RandomOwnerId AND SUBSCRIBER_ID = @RandomSubscriberId;
@@ -113,7 +113,7 @@ DECLARE
 
 WITH C AS
 	(SELECT
-		ROW_NUMBER() OVER( ORDER BY ID ) AS rownum,
+		ROW_NUMBER() OVER(ORDER BY ID) AS rownum,
 		ID, 
 		NICKNAME
 	FROM dbo.USERS)
@@ -142,9 +142,17 @@ DELETE Duplicate FROM (
   FROM dbo.Duplicates) Duplicate
 WHERE rn > 1;
 
--- AAA
-SELECT MONTH(S.CREATE_DATE), U.ID, COUNT(*)
-FROM dbo.USERS U
-JOIN dbo.SUBSCRIPTIONS S ON U.ID = S.OWNER_ID
-GROUP BY MONTH(S.CREATE_DATE), U.ID;
+-- Count of users' subscribers by year
+WITH C AS
+(
+	SELECT
+		YEAR(S.CREATE_DATE) AS [Year],
+		U.ID,
+		COUNT(*) [Subscribers]
+	FROM dbo.USERS U
+	JOIN dbo.SUBSCRIPTIONS S ON U.ID = S.OWNER_ID
+	GROUP BY YEAR(S.CREATE_DATE), U.ID
+)
+SELECT * FROM C
+WHERE YEAR(CURRENT_TIMESTAMP) - C.[Year] <= 20;
 
