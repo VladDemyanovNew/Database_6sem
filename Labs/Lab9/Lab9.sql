@@ -7,11 +7,17 @@ ADD REGISTRATION_DATE Date NOT NULL;
 ALTER TABLE dbo.USERS
 ADD TO_BE_DELETED BIT NOT NULL;
 
+ALTER TABLE dbo.SUBSCRIPTIONS
+ADD CREATE_DATE Date NOT NULL;
+
 ALTER TABLE dbo.USERS
 DROP COLUMN REGISTRATION_DATE;
 
 ALTER TABLE dbo.USERS
 DROP COLUMN TO_BE_DELETED;
+
+ALTER TABLE dbo.SUBSCRIPTIONS
+DROP COLUMN CREATE_DATE;
 GO
 
 CREATE OR ALTER PROCEDURE SeedDatabase AS
@@ -21,10 +27,12 @@ BEGIN
 	EXEC sp_MSForEachTable @TruncateAllQuery;
 	EXEC sp_MSForEachTable @ResetIdentityQuery;
 
+	DECLARE @RandomDate Date;
+
 	DECLARE @RowsCounter INT = 1, @RowsCount INT = 1000;
 	WHILE @RowsCounter <= @RowsCount
 	BEGIN
-		DECLARE @RandomDate Date = DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 3650), '2000-01-01');
+		SET @RandomDate = DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 3650), '2000-01-01');
 
 		INSERT INTO dbo.USERS(NICKNAME, REGISTRATION_DATE, TO_BE_DELETED)
 		VALUES (CONCAT('User ', @RowsCounter), @RandomDate, convert(bit, round(1*rand(),0)));
@@ -37,6 +45,7 @@ BEGIN
 		DECLARE @RandomOwnerId INT = FLOOR(RAND()*(@RowsCount-1)+1),
 						@RandomSubscriberId INT = FLOOR(RAND()*(@RowsCount-1)+1),
 						@DoesAlreadyExist INT;
+		SET @RandomDate = DATEADD(DAY, ABS(CHECKSUM(NEWID()) % 3650), '2000-01-01');
 		
 		SELECT @DoesAlreadyExist = SUBSCRIBER_ID FROM dbo.SUBSCRIPTIONS
 		WHERE OWNER_ID = @RandomOwnerId AND SUBSCRIBER_ID = @RandomSubscriberId;
@@ -46,8 +55,8 @@ BEGIN
 			CONTINUE;
 		END;
 
-		INSERT INTO dbo.SUBSCRIPTIONS(OWNER_ID, SUBSCRIBER_ID)
-		VALUES (@RandomOwnerId, @RandomSubscriberId);
+		INSERT INTO dbo.SUBSCRIPTIONS(OWNER_ID, SUBSCRIBER_ID, CREATE_DATE)
+		VALUES (@RandomOwnerId, @RandomSubscriberId, @RandomDate);
 		SET @RowsCounter = @RowsCounter + 1;
 	END;
 END;
@@ -129,13 +138,13 @@ VALUES ('Duplicate'),
 SELECT * FROM dbo.Duplicates;
 
 DELETE Duplicate FROM (
-  SELECT *, rn = row_number() OVER (PARTITION BY [Name] ORDER BY [Name])
+  SELECT *, rn = row_number() OVER(PARTITION BY [Name] ORDER BY [Name])
   FROM dbo.Duplicates) Duplicate
 WHERE rn > 1;
 
 -- AAA
-SELECT U.ID, COUNT(*)
+SELECT MONTH(S.CREATE_DATE), U.ID, COUNT(*)
 FROM dbo.USERS U
 JOIN dbo.SUBSCRIPTIONS S ON U.ID = S.OWNER_ID
-GROUP BY U.ID;
+GROUP BY MONTH(S.CREATE_DATE), U.ID;
 
