@@ -1,4 +1,5 @@
 ﻿using Lab2.Abstractions;
+using Lab2.Database;
 using Lab2.Exceptions;
 using Lab2.Models;
 using Microsoft.Data.SqlClient;
@@ -12,9 +13,12 @@ public class UserService : IUserService
 {
     private readonly string connectionString;
 
-    public UserService(IConfiguration configuration) 
+    private readonly Lab11Context _dbContext;
+
+    public UserService(IConfiguration configuration, Lab11Context dbContext) 
     {
         this.connectionString = configuration.GetConnectionString("DefaultConnection");
+        this._dbContext = dbContext;
     }
 
     public async Task<User?> GetAsync(int userId)
@@ -348,5 +352,11 @@ public class UserService : IUserService
         }
 
         return result.Select(spatialData => spatialData.ToString());
+    }
+
+    public IEnumerable<User> Test()
+    {
+        var users = this._dbContext.Users;
+        return users;
     }
 }

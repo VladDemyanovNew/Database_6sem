@@ -1,186 +1,102 @@
 ﻿namespace Lab2.Services;
 
 using Lab2.Abstractions;
+using Lab2.Database;
 using Lab2.Exceptions;
 using Lab2.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 
 public class PostService : IPostService
 {
-    private readonly string connectionString;
+    private readonly Lab11Context _dbContext;
 
-    public PostService(IConfiguration configuration)
+    public PostService(Lab11Context dbContext)
     {
-        this.connectionString = configuration.GetConnectionString("DefaultConnection");
+        this._dbContext = dbContext;
     }
 
-    public async Task<Post?> GetAsync(int postId)
+    public async Task<Post> GetAsync(int postId)
     {
-        using (SqlConnection connection = new SqlConnection(this.connectionString))
-        {
-            await connection.OpenAsync();
-
-            SqlCommand command = new SqlCommand("PGET_POST", connection);
-            command.CommandType = CommandType.StoredProcedure;
-
-            SqlParameter postIdParam = new SqlParameter
-            {
-                ParameterName = "@post_id",
-                Value = postId
-            };
-            command.Parameters.Add(postIdParam);
-
-            using (SqlDataReader reader = await command.ExecuteReaderAsync())
-            {
-                if (!reader.HasRows)
-                {
-                    return null;
-                }
-
-                await reader.ReadAsync();
-
-                var post = new Post
-                {
-                    Id = reader.GetInt32(0),
-                    Content = reader.GetString(1),
-                    OwnerId = reader.GetInt32(2),
-                };
-
-                return post;
-            }
-        }
-    }
-
-    public async Task UpdateAsync(int postId, Post postUdpateData)
-    {
-        var post = await this.GetAsync(postId);
-
+        var post = await this._dbContext.Posts.FirstOrDefaultAsync(post => post.Id == postId);
         if (post == null)
         {
             throw new EntityNotFoundException($"Post with id={postId} has not found");
         }
 
-        using (SqlConnection connection = new SqlConnection(this.connectionString))
+        return post;
+    }
+
+    public async Task UpdateAsync(int postId, Post postUdpateData)
+    {
+        var post = await this._dbContext.Posts.FirstOrDefaultAsync(post => post.Id == postId);
+        if (post == null)
         {
-            await connection.OpenAsync();
-
-            SqlCommand command = new SqlCommand("PUPDATE_POST", connection);
-            command.CommandType = CommandType.StoredProcedure;
-
-            SqlParameter postIdParam = new SqlParameter
-            {
-                ParameterName = "@post_id",
-                Value = postId
-            };
-            SqlParameter contentParam = new SqlParameter
-            {
-                ParameterName = "@content",
-                Value = postUdpateData.Content
-            };
-            SqlParameter ownerIdParam = new SqlParameter
-            {
-                ParameterName = "@owner_id",
-                Value = postUdpateData.OwnerId
-            };
-
-            command.Parameters.Add(postIdParam);
-            command.Parameters.Add(contentParam);
-            command.Parameters.Add(ownerIdParam);
-
-            _ = await command.ExecuteScalarAsync();
+            throw new EntityNotFoundException($"Can't update post, " +
+                   $"because post with id={postId} has not found");
         }
+
+        var user = await this._dbContext.Users.FirstOrDefaultAsync(user => user.Id == postUdpateData.OwnerId);
+        if (user == null)
+        {
+            throw new EntityNotFoundException($"Can't update post, " +
+                $"because user with id={postUdpateData.OwnerId} has not found");
+        }
+
+        post.OwnerId = postUdpateData.OwnerId;
+        post.Content = postUdpateData.Content;
+        await this._dbContext.SaveChangesAsync();
     }
 
     public async Task<Post> CreateAsync(Post postCreateData)
     {
-        using (SqlConnection connection = new SqlConnection(this.connectionString))
+        var user = await this._dbContext.Users.FirstOrDefaultAsync(user => user.Id == postCreateData.OwnerId);
+        if (user == null)
         {
-            await connection.OpenAsync();
-
-            SqlCommand command = new SqlCommand("PCREATE_POST", connection);
-            command.CommandType = CommandType.StoredProcedure;
-
-            SqlParameter contentParam = new SqlParameter
-            {
-                ParameterName = "@content",
-                Value = postCreateData.Content
-            };
-            SqlParameter ownerIdParam = new SqlParameter
-            {
-                ParameterName = "@owner_id",
-                Value = postCreateData.OwnerId
-            };
-
-            command.Parameters.Add(contentParam);
-            command.Parameters.Add(ownerIdParam);
-
-            var result = await command.ExecuteScalarAsync();
-            if (result != null && Int32.TryParse(result.ToString(), out int createdPostId))
-            {
-                postCreateData.Id = createdPostId;
-            }
+            throw new EntityNotFoundException($"Can't create post, " +
+                $"because user with id={postCreateData.OwnerId} has not found");
         }
+
+        _ = await this._dbContext.Posts.AddAsync(postCreateData);
+        _ = await this._dbContext.SaveChangesAsync();
         return postCreateData;
     }
 
     public async Task DeleteAsync(int postId)
     {
-        var post = await this.GetAsync(postId);
-
+        var post = await this._dbContext.Posts.FirstOrDefaultAsync(post => post.Id == postId);
         if (post == null)
         {
             throw new EntityNotFoundException($"Post with id={postId} has not found");
         }
 
-        using (SqlConnection connection = new SqlConnection(this.connectionString))
-        {
-            await connection.OpenAsync();
-
-            SqlCommand command = new SqlCommand("PDELETE_POST", connection);
-            command.CommandType = CommandType.StoredProcedure;
-
-            SqlParameter postIdParam = new SqlParameter
-            {
-                ParameterName = "@post_id",
-                Value = postId
-            };
-            command.Parameters.Add(postIdParam);
-
-            _ = await command.ExecuteNonQueryAsync();
-        }
+        this._dbContext.Posts.Remove(post);
+        _ = await this._dbContext.SaveChangesAsync();
     }
 
-    public async Task<ICollection<Post>> GetAllAsync()
+    public IEnumerable<Post> GetAll() => this._dbContext.Posts;
+
+    public async Task<IEnumerable<Post>> ExampleOfTransaction(IEnumerable<Post> posts)
     {
-        var posts = new List<Post>();
+        using var transaction = this._dbContext.Database.BeginTransaction();
 
-        using (SqlConnection connection = new SqlConnection(this.connectionString))
+        try
         {
-            await connection.OpenAsync();
-
-            SqlCommand command = new SqlCommand("PGET_ALL_POSTS", connection);
-            command.CommandType = CommandType.StoredProcedure;
-
-            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+            foreach (var post in posts)
             {
-                if (!reader.HasRows)
-                {
-                    return posts;
-                }
-
-                while (await reader.ReadAsync())
-                {
-                    posts.Add(new Post
-                    {
-                        Id = reader.GetInt32(0),
-                        Content = reader.GetString(1),
-                        OwnerId = reader.GetInt32(2),
-                    });
-                }
+                _ = await this._dbContext.Posts.AddAsync(post);
             }
+
+            _ = await this._dbContext.SaveChangesAsync();
+            transaction.Commit();
+        }
+        catch (Exception)
+        {
+            transaction.Rollback();
+            throw new OperationFailedException($"Transaction failed");
         }
 
         return posts;

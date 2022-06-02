@@ -83,4 +83,8 @@ public class UsersController : ControllerBase
     [HttpGet("shortestWay")]
     public async Task<IEnumerable<string>> DisplayShortestWay() =>
         await this.userService.DisplayShortestWay();
+
+    [HttpGet("test")]
+    public IEnumerable<User> Test() =>
+        this.userService.Test();
 }

@@ -2,5 +2,5 @@
 
 public class User : BaseEntity
 {
-    public string Nickname { get; set; }
+    public string Nickname { get; set; } = string.Empty;
 }

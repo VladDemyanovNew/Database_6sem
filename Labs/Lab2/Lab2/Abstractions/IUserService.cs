@@ -25,4 +25,6 @@ public interface IUserService
     Task<User?> FindNearestNeighborAsync(int userId);
 
     Task<IEnumerable<string>> DisplayShortestWay();
+
+    IEnumerable<User> Test();
 }

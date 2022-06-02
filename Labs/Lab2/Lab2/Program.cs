@@ -1,8 +1,10 @@
 using Lab2.Abstractions;
+using Lab2.Database;
 using Lab2.Exceptions;
 using Lab2.Models;
 using Lab2.Services;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,14 +12,19 @@ builder.Services.AddControllers();
 
 builder.Services
     .AddScoped<IUserService, UserService>()
-    .AddScoped<IPostService, PostService>();
+    .AddScoped<IPostService, PostService>()
+    .AddScoped<IAuditService, AuditService>();
+
+var connectionString = builder.Configuration.GetConnectionString("Lab11Connection");
+builder.Services.AddDbContext<Lab11Context>(options =>
+    options.UseSqlite(connectionString));
 
 var app = builder.Build();
 
 // Configure Exception handler.
 app.UseExceptionHandler(app => app.Run(async context =>
 {
-    var exception = context.Features.Get<IExceptionHandlerFeature>().Error;
+    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
     switch (exception)
     {
