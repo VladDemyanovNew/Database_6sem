@@ -98,3 +98,64 @@ SET @EncryptedMessage = EncryptByCert(Cert_ID('Shipping04'), @Message);
 PRINT CONCAT('Encrypted message:', ' ', @EncryptedMessage);
 SET @Message = CAST(DecryptByCert(Cert_ID('Shipping04'), @EncryptedMessage, N'pGFD4bb925DGvbd2439587y') as nvarchar(58));
 PRINT CONCAT('Decrypted message:', ' ', @Message);
+
+-- 15.
+GO
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'admin';
+
+CREATE CERTIFICATE CertificateForSKey
+WITH SUBJECT = 'CertificateForSKey';
+
+CREATE SYMMETRIC KEY SymmetricKey WITH
+IDENTITY_VALUE = 'SymmetricKey',
+ALGORITHM = AES_256,
+KEY_SOURCE = 'admin'
+ENCRYPTION BY CERTIFICATE CertificateForSKey;
+
+OPEN SYMMETRIC KEY SymmetricKey
+DECRYPTION BY CERTIFICATE CertificateForSKey;
+
+DECLARE
+	@Message NVARCHAR(16) = 'Hello world!',
+	@EncryptedMessage NVARCHAR(256);
+
+PRINT CONCAT('Pristine message:', ' ', @Message);
+SET @EncryptedMessage = EncryptByKey(Key_GUID('SymmetricKey'), @Message);
+PRINT CONCAT('Encrypted message:', ' ', @EncryptedMessage);
+SET @Message = DecryptByKey(@EncryptedMessage);
+PRINT CONCAT('Decrypted message:', ' ', @Message);
+
+-- 17.
+USE DVR_PSCA;
+
+CREATE DATABASE ENCRYPTION KEY
+WITH ALGORITHM = AES_256
+ENCRYPTION BY SERVER CERTIFICATE CertificateForSKey;
+
+ALTER DATABASE DVR_PSCA
+SET ENCRYPTION ON;
+
+SELECT encryption_state FROM sys.dm_database_encryption_keys;
+
+ALTER DATABASE DVR_PSCA
+SET ENCRYPTION OFF;
+
+-- 18.
+select HashBytes('SHA1', 'hello');
+
+-- 19.
+select * from sys.certificates;
+
+-- 20.
+BACKUP CERTIFICATE Shipping04
+TO FILE = N'D:\University\SixthSem\BackupCertificateForShipping04.cer'
+WITH PRIVATE KEY
+(
+	file = N'D:\University\SixthSem\BackupCertificateForShipping04.pvk',
+	encryption by password = N'pGFD4bb925DGvbd2439587y',
+	decryption by password = N'pGFD4bb925DGvbd2439587y'
+);
+
+USE MASTER;
+BACKUP MASTER KEY TO FILE = 'D:\University\SixthSem\BackupMasterKey.key' 
+ENCRYPTION BY PASSWORD = 'admin';
