@@ -10,6 +10,9 @@ ADD TO_BE_DELETED BIT NOT NULL;
 ALTER TABLE dbo.SUBSCRIPTIONS
 ADD CREATE_DATE Date NOT NULL;
 
+ALTER TABLE dbo.SUBSCRIPTIONS
+ADD [TYPE] INT NOT NULL;
+
 ALTER TABLE dbo.USERS
 DROP COLUMN REGISTRATION_DATE;
 
@@ -18,6 +21,9 @@ DROP COLUMN TO_BE_DELETED;
 
 ALTER TABLE dbo.SUBSCRIPTIONS
 DROP COLUMN CREATE_DATE;
+
+ALTER TABLE dbo.SUBSCRIPTIONS
+DROP COLUMN [TYPE];
 GO
 
 CREATE OR ALTER PROCEDURE SeedDatabase AS
@@ -27,7 +33,9 @@ BEGIN
 	EXEC sp_MSForEachTable @TruncateAllQuery;
 	EXEC sp_MSForEachTable @ResetIdentityQuery;
 
-	DECLARE @RandomDate Date;
+	DECLARE @RandomDate Date,
+					@RandomOwnerId INT,
+					@DoesAlreadyExist INT;
 
 	DECLARE @RowsCounter INT = 1, @RowsCount INT = 1000;
 	WHILE @RowsCounter <= @RowsCount
@@ -42,9 +50,9 @@ BEGIN
 	SET @RowsCounter = 1;
 	WHILE @RowsCounter <= @RowsCount
 	BEGIN
-		DECLARE @RandomOwnerId INT = FLOOR(RAND()*(@RowsCount-1)+1),
-						@RandomSubscriberId INT = FLOOR(RAND()*(@RowsCount-1)+1),
-						@DoesAlreadyExist INT;
+		DECLARE @RandomSubscriberId INT = FLOOR(RAND()*(@RowsCount-1)+1);
+
+		SET @RandomOwnerId = FLOOR(RAND()*(@RowsCount-1)+1);
 		SET @RandomDate = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 3650), CURRENT_TIMESTAMP);
 		
 		SELECT @DoesAlreadyExist = SUBSCRIBER_ID FROM dbo.SUBSCRIPTIONS
@@ -55,8 +63,8 @@ BEGIN
 			CONTINUE;
 		END;
 
-		INSERT INTO dbo.SUBSCRIPTIONS(OWNER_ID, SUBSCRIBER_ID, CREATE_DATE)
-		VALUES (@RandomOwnerId, @RandomSubscriberId, @RandomDate);
+		INSERT INTO dbo.SUBSCRIPTIONS(OWNER_ID, SUBSCRIBER_ID, CREATE_DATE, [TYPE])
+		VALUES (@RandomOwnerId, @RandomSubscriberId, @RandomDate, FLOOR(RAND()*(4-1)+1));
 		SET @RowsCounter = @RowsCounter + 1;
 	END;
 END;
@@ -71,11 +79,11 @@ FROM dbo.USERS
 ORDER BY 'rank';
 
 INSERT INTO dbo.USERS (NICKNAME, REGISTRATION_DATE, TO_BE_DELETED)
-VALUES ('New 6', '2022-06-01', 0),
-('New 7', '2022-06-01', 0),
-('New 8', '2022-06-01', 0),
-('New 9', '2022-06-01', 0),
-('New 10', '2022-06-01', 0);
+VALUES ('New 6', '2022-06-03', 0),
+('New 7', '2022-06-03', 0),
+('New 8', '2022-06-03', 0),
+('New 9', '2022-06-03', 0),
+('New 10', '2022-06-03', 0);
 
 -- Count of new users (current date)
 SELECT COUNT(*) AS [Count]
@@ -155,4 +163,37 @@ WITH C AS
 )
 SELECT * FROM C
 WHERE YEAR(CURRENT_TIMESTAMP) - C.[Year] <= 20;
+
+-- ttt
+
+WITH C AS(
+SELECT 
+	[TYPE],
+	SUBSCRIBER_ID,
+	COUNT(*) OVER(PARTITION BY [TYPE] ORDER BY [TYPE]) AS Subs --OVER(PARTITION BY [TYPE] ORDER BY [TYPE])
+FROM dbo.SUBSCRIPTIONS
+GROUP BY [TYPE], SUBSCRIBER_ID
+)
+SELECT 
+	[TYPE],
+	SUBSCRIBER_ID,
+	MAX(Subs) OVER (PARTITION BY [TYPE],Subs ORDER BY [TYPE])  
+FROM C
+GROUP BY [TYPE], SUBSCRIBER_ID
+-- 341
+
+SELECT 
+	[TYPE],
+	SUBSCRIBER_ID,
+	COUNT(*) AS Subs,
+	RANK() OVER (ORDER BY COUNT(*) ASC) AS RK
+FROM dbo.SUBSCRIPTIONS
+GROUP BY [TYPE], SUBSCRIBER_ID;
+
+SELECT 
+	DISTINCT([TYPE]),
+	SUBSCRIBER_ID,
+	COUNT(*) OVER (PARTITION BY [TYPE], SUBSCRIBER_ID ORDER BY [TYPE]) AS Subs
+FROM dbo.SUBSCRIPTIONS;
+
 
